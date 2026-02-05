@@ -29,10 +29,17 @@ public class HotKeyWindow : Form {
         base.WndProc(ref m);
     }
 }
+
+public static class Win32Drag {
+    [DllImport("user32.dll")]
+    public static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+}
 "@
 
 $AppName = "MyTime"
-$CheckInMinutes = 15
 $AutoSaveSeconds = 60
 
 function Get-AppDataDir {
@@ -73,10 +80,10 @@ function New-DefaultData {
 
 function New-DefaultSettings {
     return [ordered]@{
-        check_in_minutes = $CheckInMinutes
         write_daily_desktop_log = $true
         write_per_ticket_desktop_log = $true
         desktop_path_override = ""
+        floating_font_scale = 1.0
     }
 }
 
@@ -157,6 +164,7 @@ function New-InputDialog {
     $form.FormBorderStyle = "FixedDialog"
     $form.MaximizeBox = $false
     $form.MinimizeBox = $false
+    $form.TopMost = $true
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Prompt
@@ -190,6 +198,10 @@ function New-InputDialog {
 
     $form.AcceptButton = $ok
     $form.CancelButton = $cancel
+    $form.Add_Shown({
+        $form.Activate()
+        $form.BringToFront()
+    })
 
     $result = $form.ShowDialog()
     if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
@@ -212,6 +224,7 @@ function New-SelectDialog {
     $form.FormBorderStyle = "FixedDialog"
     $form.MaximizeBox = $false
     $form.MinimizeBox = $false
+    $form.TopMost = $true
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Prompt
@@ -247,6 +260,10 @@ function New-SelectDialog {
 
     $form.AcceptButton = $ok
     $form.CancelButton = $cancel
+    $form.Add_Shown({
+        $form.Activate()
+        $form.BringToFront()
+    })
 
     $result = $form.ShowDialog()
     if ($result -eq [System.Windows.Forms.DialogResult]::OK -and $listBox.SelectedItem) {
@@ -270,6 +287,7 @@ function New-ConfirmDialog {
     $form.FormBorderStyle = "FixedDialog"
     $form.MaximizeBox = $false
     $form.MinimizeBox = $false
+    $form.TopMost = $true
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Message
@@ -296,6 +314,10 @@ function New-ConfirmDialog {
 
     $form.AcceptButton = $no
     $form.CancelButton = $no
+    $form.Add_Shown({
+        $form.Activate()
+        $form.BringToFront()
+    })
 
     $result = $form.ShowDialog()
     return $result -eq [System.Windows.Forms.DialogResult]::Yes
@@ -317,54 +339,14 @@ function Get-PropValue {
     return $null
 }
 
-function New-ReminderDialog {
-    param(
-        [string]$Label,
-        [string]$Elapsed
-    )
-    $form = New-Object System.Windows.Forms.Form
-    $form.Text = "MyTime Reminder"
-    $form.StartPosition = "CenterScreen"
-    $form.Width = 420
-    $form.Height = 180
-    $form.FormBorderStyle = "FixedDialog"
-    $form.MaximizeBox = $false
-    $form.MinimizeBox = $false
-
-    $label = New-Object System.Windows.Forms.Label
-    $label.Text = ("Continue timer for ""{0}""?`nElapsed: {1}" -f $Label, $Elapsed)
-    $label.AutoSize = $true
-    $label.Left = 12
-    $label.Top = 12
-    $form.Controls.Add($label)
-
-    $continue = New-Object System.Windows.Forms.Button
-    $continue.Text = "Continue"
-    $continue.Left = 200
-    $continue.Top = 90
-    $continue.Width = 90
-    $continue.DialogResult = [System.Windows.Forms.DialogResult]::Yes
-    $form.Controls.Add($continue)
-
-    $stop = New-Object System.Windows.Forms.Button
-    $stop.Text = "Stop"
-    $stop.Left = 300
-    $stop.Top = 90
-    $stop.Width = 90
-    $stop.DialogResult = [System.Windows.Forms.DialogResult]::No
-    $form.Controls.Add($stop)
-
-    $form.AcceptButton = $continue
-    $form.CancelButton = $continue
-
-    $result = $form.ShowDialog()
-    if ($result -eq [System.Windows.Forms.DialogResult]::No) { return "stop" }
-    return "continue"
-}
-
 function New-NoteDialog {
-    param([string]$Label, [string]$Duration)
-    $prompt = "Stopped: $Label`nDuration: $Duration`nOptional note:"
+    param([string]$Label, [string]$Duration, [string]$SessionDuration)
+    $lines = @("Stopped: $Label", "Total: $Duration")
+    if ($SessionDuration) {
+        $lines += "Last Session: $SessionDuration"
+    }
+    $lines += "Optional note:"
+    $prompt = $lines -join "`n"
     return New-InputDialog -Title "Stop Timer" -Prompt $prompt -DefaultValue ""
 }
 
@@ -376,13 +358,8 @@ $State = [ordered]@{
     data = $null
     settings = $null
     runtime = [ordered]@{
-        next_checkin_at = $null
         last_autosave_at = $null
         recovery_prompt = $null
-        active_base_seconds = 0
-        active_start_utc = $null
-        active_timer_id = $null
-        active_stopwatch = $null
     }
 }
 
@@ -433,31 +410,9 @@ function Get-ActiveSession {
     return $timer.sessions | Where-Object { $_.id -eq $State.data.active_session_id } | Select-Object -First 1
 }
 
-function Start-ActiveStopwatch {
-    if ($State.runtime.active_stopwatch) {
-        $State.runtime.active_stopwatch.Reset()
-        $State.runtime.active_stopwatch.Start()
-        return
-    }
-    $State.runtime.active_stopwatch = [System.Diagnostics.Stopwatch]::New()
-    $State.runtime.active_stopwatch.Start()
-}
-
-function Stop-ActiveStopwatch {
-    if ($State.runtime.active_stopwatch) {
-        $State.runtime.active_stopwatch.Stop()
-    }
-}
-
 function Clear-ActiveTracking {
     $State.data.active_timer_id = $null
     $State.data.active_session_id = $null
-    $State.runtime.next_checkin_at = $null
-    $State.runtime.active_timer_id = $null
-    $State.runtime.active_base_seconds = 0
-    $State.runtime.active_start_utc = $null
-    Stop-ActiveStopwatch
-    $State.runtime.active_stopwatch = $null
 }
 
 function Close-ActiveSession {
@@ -519,13 +474,6 @@ function Start-TimerInternal {
 
     $State.data.active_timer_id = [string]$TimerId
     $State.data.active_session_id = $session.id
-    $State.runtime.active_timer_id = [string]$TimerId
-    $State.runtime.active_base_seconds = Sum-CompletedTimerForTodaySeconds -Timer $timer
-    $State.runtime.active_start_utc = $now
-    Start-ActiveStopwatch
-    $minutes = [int]$State.settings.check_in_minutes
-    if ($minutes -lt 1) { $minutes = $CheckInMinutes }
-    $State.runtime.next_checkin_at = $now.AddMinutes($minutes)
     $State.runtime.last_autosave_at = $now
     Save-Data
 }
@@ -568,15 +516,31 @@ function Most-RecentTimerId {
 function Active-ElapsedSeconds {
     $timer = Get-ActiveTimer
     if (-not $timer) { return 0 }
+    return (Timer-ElapsedTodaySeconds -Timer $timer)
+}
+
+function Timer-ElapsedTodaySeconds {
+    param($Timer)
+    if (-not $Timer) { return 0 }
+    $activeTimerId = $State.data.active_timer_id
+    $activeSessionId = $State.data.active_session_id
 
     $todayLocal = (Get-Date).Date
     $dayStartUtc = $todayLocal.ToUniversalTime()
     $dayEndUtc = $todayLocal.AddDays(1).ToUniversalTime()
 
     $total = 0
-    foreach ($session in $timer.sessions) {
+    foreach ($session in $Timer.sessions) {
         $start = From-UtcString $session.start
-        $end = if ($session.end) { From-UtcString $session.end } else { Utc-Now }
+        if (-not $start) { continue }
+        if ($session.end) {
+            $end = From-UtcString $session.end
+        } elseif ($activeTimerId -and $activeSessionId -and $Timer.id -eq $activeTimerId -and $session.id -eq $activeSessionId) {
+            $end = Utc-Now
+        } else {
+            continue
+        }
+        if (-not $end) { continue }
         if ($end -le $dayStartUtc -or $start -ge $dayEndUtc) { continue }
         if ($start -lt $dayStartUtc) { $start = $dayStartUtc }
         if ($end -gt $dayEndUtc) { $end = $dayEndUtc }
@@ -591,30 +555,26 @@ function Total-ForToday {
     $dayEndLocal = $todayLocal.AddDays(1)
     $dayStartUtc = $dayStartLocal.ToUniversalTime()
     $dayEndUtc = $dayEndLocal.ToUniversalTime()
+    $activeTimerId = $State.data.active_timer_id
+    $activeSessionId = $State.data.active_session_id
     $total = 0
     foreach ($timer in $State.data.timers) {
         foreach ($session in $timer.sessions) {
             $start = From-UtcString $session.start
-            $end = if ($session.end) { From-UtcString $session.end } else { Utc-Now }
+            if (-not $start) { continue }
+            if ($session.end) {
+                $end = From-UtcString $session.end
+            } elseif ($activeTimerId -and $activeSessionId -and $timer.id -eq $activeTimerId -and $session.id -eq $activeSessionId) {
+                $end = Utc-Now
+            } else {
+                continue
+            }
+            if (-not $end) { continue }
             if ($end -le $dayStartUtc -or $start -ge $dayEndUtc) { continue }
             if ($start -lt $dayStartUtc) { $start = $dayStartUtc }
             if ($end -gt $dayEndUtc) { $end = $dayEndUtc }
             $total += [math]::Max(0, ($end - $start).TotalSeconds)
         }
-    }
-    return [int]$total
-}
-
-function Total-ForToday-Stable {
-    $total = 0
-    foreach ($timer in $State.data.timers) {
-        $idVal = [string](Get-PropValue -Obj $timer -Name "id")
-        $activeId = if ($State.data.active_timer_id) { [string]$State.data.active_timer_id } else { "" }
-        if ($State.data.active_session_id -and $idVal -and $activeId -and $idVal.ToLower() -eq $activeId.ToLower()) {
-            $total += Active-ElapsedSeconds-Stable
-            continue
-        }
-        $total += Sum-CompletedTimerForTodaySeconds -Timer $timer
     }
     return [int]$total
 }
@@ -646,6 +606,7 @@ function Write-LogLine {
     param(
         [string]$Label,
         [int]$DurationSeconds,
+        [int]$SessionSeconds,
         [string]$Note,
         [DateTime]$EndedAtUtc
     )
@@ -653,7 +614,11 @@ function Write-LogLine {
     $localEnd = $EndedAtUtc.ToLocalTime()
     $dateStamp = $localEnd.ToString("yyyy-MM-dd")
     $ts = $localEnd.ToString("yyyy-MM-dd HH:mm")
-    $line = "[{0}] {1} | {2} | Note: {3}`n" -f $ts, $Label, (Format-Hms -TotalSeconds $DurationSeconds), $Note.Trim()
+    $sessionText = ""
+    if ($SessionSeconds -gt 0) {
+        $sessionText = " | Session: {0}" -f (Format-Hms -TotalSeconds $SessionSeconds)
+    }
+    $line = "[{0}] {1} | Total: {2}{3} | Note: {4}`n" -f $ts, $Label, (Format-Hms -TotalSeconds $DurationSeconds), $sessionText, $Note.Trim()
 
     if ($State.settings.write_daily_desktop_log) {
         $daily = Join-Path $targetDir ("TicketTimeLog_{0}.txt" -f $dateStamp)
@@ -667,9 +632,10 @@ function Write-LogLine {
 }
 
 function Log-StoppedSession {
-    param($Summary, [string]$Note)
+    param($Summary, [int]$TotalSeconds, [string]$Note)
     $endUtc = From-UtcString $Summary.end
-    Write-LogLine -Label $Summary.label -DurationSeconds $Summary.duration_seconds -Note $Note -EndedAtUtc $endUtc
+    $sessionSeconds = [int]$Summary.duration_seconds
+    Write-LogLine -Label $Summary.label -DurationSeconds $TotalSeconds -SessionSeconds $sessionSeconds -Note $Note -EndedAtUtc $endUtc
 
     $timer = Get-TimerById -TimerId $Summary.timer_id
     if ($timer) {
@@ -703,7 +669,7 @@ function Save-PendingSessions {
     }
 
     foreach ($item in $pending) {
-        Write-LogLine -Label $item.label -DurationSeconds $item.duration_seconds -Note $item.note -EndedAtUtc $item.end
+                Write-LogLine -Label $item.label -DurationSeconds $item.duration_seconds -SessionSeconds 0 -Note $item.note -EndedAtUtc $item.end
         $item.session.exported = $true
     }
     if ($pending.Count -gt 0) {
@@ -714,7 +680,9 @@ function Save-PendingSessions {
 function Stop-And-SaveAll {
     $summary = Close-ActiveSession -At (Utc-Now)
     if ($summary) {
-        Log-StoppedSession -Summary $summary -Note ""
+        $timer = Get-TimerById -TimerId $summary.timer_id
+        $totalSeconds = if ($timer) { Timer-ElapsedTodaySeconds -Timer $timer } else { [int]$summary.duration_seconds }
+        Log-StoppedSession -Summary $summary -TotalSeconds $totalSeconds -Note ""
     }
     Save-PendingSessions
 }
@@ -751,14 +719,14 @@ function Load-State {
     $State.settings = Read-JsonOrDefault -Path $settingsPath -DefaultValue (New-DefaultSettings)
 
     if (-not $State.data.timers) { $State.data.timers = @() }
-    if (-not $State.settings.check_in_minutes) { $State.settings.check_in_minutes = $CheckInMinutes }
     if ($null -eq $State.settings.write_daily_desktop_log) { $State.settings.write_daily_desktop_log = $true }
     if ($null -eq $State.settings.write_per_ticket_desktop_log) { $State.settings.write_per_ticket_desktop_log = $true }
     if (-not $State.settings.desktop_path_override) { $State.settings.desktop_path_override = "" }
-    if ($null -eq $State.runtime.active_base_seconds) { $State.runtime.active_base_seconds = 0 }
-    if (-not $State.runtime.active_start_utc) { $State.runtime.active_start_utc = $null }
-    if (-not $State.runtime.active_timer_id) { $State.runtime.active_timer_id = $null }
-    if ($null -eq $State.runtime.active_stopwatch) { $State.runtime.active_stopwatch = $null }
+    if (-not ($State.settings.PSObject.Properties.Name -contains "floating_font_scale")) {
+        $State.settings | Add-Member -NotePropertyName floating_font_scale -NotePropertyValue 1.0
+    }
+    $fontScale = Get-PropValue -Obj $State.settings -Name "floating_font_scale"
+    if ($null -eq $fontScale -or [double]$fontScale -le 0) { $State.settings.floating_font_scale = 1.0 }
 
     # Normalize timers loaded from JSON to prevent missing properties
     $normalizedTimers = @()
@@ -794,75 +762,196 @@ function Load-State {
     Save-All
 }
 
-function Sum-CompletedTimerForTodaySeconds {
-    param($Timer)
-    if (-not $Timer) { return 0 }
-    $todayLocal = (Get-Date).Date
-    $dayStartUtc = $todayLocal.ToUniversalTime()
-    $dayEndUtc = $todayLocal.AddDays(1).ToUniversalTime()
-    $total = 0
-    foreach ($session in $Timer.sessions) {
-        if (-not $session.end) { continue }
-        $start = From-UtcString $session.start
-        $end = From-UtcString $session.end
-        if ($end -le $dayStartUtc -or $start -ge $dayEndUtc) { continue }
-        if ($start -lt $dayStartUtc) { $start = $dayStartUtc }
-        if ($end -gt $dayEndUtc) { $end = $dayEndUtc }
-        $total += [math]::Max(0, ($end - $start).TotalSeconds)
-    }
-    return [int]$total
-}
-
-function Active-ElapsedSeconds-Stable {
-    $timer = Get-ActiveTimer
-    if (-not $timer) { return 0 }
-    $timerId = [string](Get-PropValue -Obj $timer -Name "id")
-    if (-not $timerId) { return 0 }
-
-    if (-not $State.data.active_session_id) {
-        return Sum-CompletedTimerForTodaySeconds -Timer $timer
-    }
-
-    $rtId = if ($State.runtime.active_timer_id) { [string]$State.runtime.active_timer_id } else { "" }
-    if (-not $rtId -or $rtId.ToLower() -ne $timerId.ToLower()) {
-        $State.runtime.active_timer_id = $timerId
-        if (-not $State.runtime.active_stopwatch -or -not $State.runtime.active_stopwatch.IsRunning) {
-            $State.runtime.active_base_seconds = Sum-CompletedTimerForTodaySeconds -Timer $timer
-            $State.runtime.active_start_utc = Utc-Now
-            Start-ActiveStopwatch
-        }
-    }
-    $startUtc = $State.runtime.active_start_utc
-    if (-not $startUtc) { return $State.runtime.active_base_seconds }
-
-    if ($State.runtime.active_stopwatch -and $State.runtime.active_stopwatch.IsRunning) {
-        $running = [math]::Max(0, $State.runtime.active_stopwatch.Elapsed.TotalSeconds)
-        return [int]($State.runtime.active_base_seconds + $running)
-    }
-
-    $runningFallback = [math]::Max(0, ((Utc-Now) - $startUtc).TotalSeconds)
-    return [int]($State.runtime.active_base_seconds + $runningFallback)
-}
-
 function Update-TrayTooltip {
     param([System.Windows.Forms.NotifyIcon]$Tray)
     $activeLabel = $null
     $activeTimer = Get-ActiveTimer
     if ($activeTimer) { $activeLabel = $activeTimer.label }
-    $activeElapsed = Active-ElapsedSeconds-Stable
-    $todayTotal = Total-ForToday-Stable
-    $symbol = if ($activeTimer) { "Running" } else { "Stopped" }
+    $activeElapsed = Active-ElapsedSeconds
+    $todayTotal = Total-ForToday
+    $symbol = "Stopped"
+    if ($activeTimer) {
+        if ($State.data.active_session_id) {
+            $symbol = "Running"
+        } else {
+            $symbol = "Paused"
+        }
+    }
     $label = if ($activeLabel) { $activeLabel } else { "No active timer" }
     $tooltip = "{0} {1} {2} | Today {3}" -f $symbol, $label, (Format-Hms -TotalSeconds $activeElapsed), (Format-Hms -TotalSeconds $todayTotal)
     if ($tooltip.Length -gt 127) { $tooltip = $tooltip.Substring(0, 127) }
     $Tray.Text = $tooltip
 }
 
+function Update-FloatingWindow {
+    param([System.Windows.Forms.Form]$Window, $Panel)
+    if (-not $Window -or -not $Panel) { return }
+    if ($Window.IsDisposed) { return }
+
+    $timers = @($State.data.timers | Where-Object { $_ })
+    if (-not (Get-Variable -Name floatingControls -Scope Script -ErrorAction SilentlyContinue)) { $script:floatingControls = @{} }
+    $scale = [double]$State.settings.floating_font_scale
+    if ($scale -le 0) { $scale = 1.0 }
+    $needsFontRefresh = $false
+    if (-not (Get-Variable -Name floatingFonts -Scope Script -ErrorAction SilentlyContinue) -or -not (Get-Variable -Name floatingFontsScale -Scope Script -ErrorAction SilentlyContinue) -or ([math]::Abs([double]$script:floatingFontsScale - $scale) -gt 0.001)) {
+        $monoFontName = "Cascadia Mono"
+        try {
+            $null = New-Object System.Drawing.Font($monoFontName, 9)
+        } catch {
+            $monoFontName = "Segoe UI"
+        }
+        $titleSize = [math]::Round(10 * $scale, 1)
+        $timeSize = [math]::Round(13 * $scale, 1)
+        $script:floatingFonts = @{
+            title = New-Object System.Drawing.Font($monoFontName, $titleSize, [System.Drawing.FontStyle]::Bold)
+            time = New-Object System.Drawing.Font($monoFontName, $timeSize, [System.Drawing.FontStyle]::Bold)
+        }
+        $script:floatingFontsScale = $scale
+        $needsFontRefresh = $true
+    }
+
+    $ids = @($timers | ForEach-Object { [string](Get-PropValue -Obj $_ -Name "id") })
+    $known = @($script:floatingControls.Keys)
+    $needsRebuild = ($ids.Count -ne $known.Count) -or (@($ids | Where-Object { $known -notcontains $_ }).Count -gt 0)
+
+    if ($needsRebuild) {
+        foreach ($control in @($Panel.Controls)) { $control.Dispose() }
+        $Panel.Controls.Clear()
+        $script:floatingControls = @{}
+        $script:floatingOrder = @()
+        $palette = @(
+            [System.Drawing.Color]::FromArgb(255, 99, 71),
+            [System.Drawing.Color]::FromArgb(100, 149, 237),
+            [System.Drawing.Color]::FromArgb(60, 179, 113),
+            [System.Drawing.Color]::FromArgb(255, 165, 0),
+            [System.Drawing.Color]::FromArgb(186, 85, 211),
+            [System.Drawing.Color]::FromArgb(72, 209, 204),
+            [System.Drawing.Color]::FromArgb(238, 130, 238),
+            [System.Drawing.Color]::FromArgb(255, 215, 0)
+        )
+        $index = 0
+        foreach ($t in $timers) {
+            $timerId = [string](Get-PropValue -Obj $t -Name "id")
+            if (-not $timerId) { continue }
+            $labelText = [string](Get-PropValue -Obj $t -Name "label")
+            if ([string]::IsNullOrWhiteSpace($labelText)) { $labelText = "Untitled" }
+            $color = $palette[$index % $palette.Count]
+            $index += 1
+
+            $block = New-Object System.Windows.Forms.Panel
+            $block.Height = 54
+            $block.Margin = New-Object System.Windows.Forms.Padding(6, 6, 6, 6)
+            $block.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
+
+            $title = New-Object System.Windows.Forms.Label
+            $title.AutoSize = $false
+            $title.Dock = "Top"
+            $title.Height = 22
+            $title.TextAlign = "MiddleLeft"
+            $title.Font = $script:floatingFonts.title
+            $title.ForeColor = $color
+            $title.Text = $labelText
+
+            $time = New-Object System.Windows.Forms.Label
+            $time.AutoSize = $false
+            $time.Dock = "Fill"
+            $time.TextAlign = "MiddleLeft"
+            $time.Font = $script:floatingFonts.time
+            $time.ForeColor = [System.Drawing.Color]::White
+
+            $block.Controls.Add($time)
+            $block.Controls.Add($title)
+            $Panel.Controls.Add($block) | Out-Null
+
+            $script:floatingControls[$timerId] = @{
+                block = $block
+                title = $title
+                time = $time
+            }
+            $script:floatingOrder += $timerId
+        }
+    }
+
+    if (-not $timers -or $timers.Count -eq 0) {
+        foreach ($control in @($Panel.Controls)) { $control.Dispose() }
+        $Panel.Controls.Clear()
+        $script:floatingControls = @{}
+        $empty = New-Object System.Windows.Forms.Label
+        $empty.AutoSize = $true
+        $empty.Text = "No timers"
+        $empty.ForeColor = [System.Drawing.Color]::White
+        $empty.Margin = New-Object System.Windows.Forms.Padding(6, 6, 6, 6)
+        $Panel.Controls.Add($empty) | Out-Null
+        return
+    }
+
+    $maxWidth = 240
+    foreach ($t in $timers) {
+        $timerId = [string](Get-PropValue -Obj $t -Name "id")
+        if (-not $timerId) { continue }
+        $controls = $script:floatingControls[$timerId]
+        if (-not $controls) { continue }
+        $labelText = [string](Get-PropValue -Obj $t -Name "label")
+        if ([string]::IsNullOrWhiteSpace($labelText)) { $labelText = "Untitled" }
+        $elapsed = Format-Hms -TotalSeconds (Timer-ElapsedTodaySeconds -Timer $t)
+        $controls.title.Text = $labelText
+        $controls.time.Text = $elapsed
+        if ($needsFontRefresh) {
+            $controls.title.Font = $script:floatingFonts.title
+            $controls.time.Font = $script:floatingFonts.time
+        }
+
+        $titleSize = [System.Windows.Forms.TextRenderer]::MeasureText($labelText, $script:floatingFonts.title)
+        $timeSize = [System.Windows.Forms.TextRenderer]::MeasureText($elapsed, $script:floatingFonts.time)
+        $blockWidth = [math]::Max($titleSize.Width, $timeSize.Width) + 24
+        if ($blockWidth -gt $maxWidth) { $maxWidth = $blockWidth }
+    }
+
+    foreach ($id in $script:floatingOrder) {
+        $controls = $script:floatingControls[$id]
+        if ($controls) {
+            $controls.block.Width = $maxWidth
+        }
+    }
+
+    $panelPadding = $Panel.Padding
+    $panelWidth = $maxWidth + $panelPadding.Left + $panelPadding.Right + 12
+    $panelHeight = 0
+    foreach ($id in $script:floatingOrder) {
+        $controls = $script:floatingControls[$id]
+        if ($controls) {
+            $panelHeight += $controls.block.Height + $controls.block.Margin.Top + $controls.block.Margin.Bottom
+        }
+    }
+    $panelHeight += $panelPadding.Top + $panelPadding.Bottom + 4
+    $Window.Width = 260
+    $Window.Height = $panelHeight
+}
+
+function Pause-ActiveSession {
+    $timer = Get-ActiveTimer
+    if (-not $timer) { return }
+    if (-not $State.data.active_session_id) { return }
+
+    $session = Get-ActiveSession
+    if (-not $session) {
+        $State.data.active_session_id = $null
+        Save-Data
+        return
+    }
+    if (-not $session.end) {
+        $session.end = To-UtcString (Utc-Now)
+    }
+
+    $State.data.active_session_id = $null
+    Save-Data
+}
+
 function Start-OrPause {
     $activeTimer = Get-ActiveTimer
     if ($activeTimer) {
         if ($State.data.active_session_id) {
-            $null = Close-ActiveSession -At (Utc-Now)
+            Pause-ActiveSession
             return
         }
         Start-TimerInternal -TimerId $activeTimer.id
@@ -893,8 +982,9 @@ function Switch-Timer {
             $label = "Untitled $shortId"
         }
         $idVal = Get-PropValue -Obj $t -Name "id"
-        $shortId = if ($idVal) { $idVal.ToString().Substring(0, 8) } else { "unknown" }
-        $display = "{0} [{1}]" -f $label, $shortId
+        $idText = if ($idVal) { [string]$idVal } else { "unknown" }
+        $elapsed = Format-Hms -TotalSeconds (Timer-ElapsedTodaySeconds -Timer $t)
+        $display = "{0} - {1} - {2}" -f $label, $elapsed, $idText
         $choices += $display
         $choiceMap[$display] = $idVal
     }
@@ -910,15 +1000,55 @@ function Switch-Timer {
 }
 
 function Stop-Timer {
-    $summary = Close-ActiveSession -At (Utc-Now)
-    if (-not $summary) { return }
-    $note = New-NoteDialog -Label $summary.label -Duration (Format-Hms -TotalSeconds $summary.duration_seconds)
-    if ($null -eq $note) { $note = "" }
-    Log-StoppedSession -Summary $summary -Note $note
+    $summary = $null
+    if ($State.data.active_session_id) {
+        $summary = Close-ActiveSession -At (Utc-Now)
+    } else {
+        $timer = Get-ActiveTimer
+        if ($timer) {
+            $latest = $timer.sessions | Sort-Object -Property @{
+                Expression = { if ($_.end) { From-UtcString $_.end } else { From-UtcString $_.start } }
+                Descending = $true
+            } | Select-Object -First 1
+            if ($latest) {
+                if (-not $latest.end) {
+                    $latest.end = To-UtcString (Utc-Now)
+                }
+                $start = From-UtcString $latest.start
+                $end = From-UtcString $latest.end
+                if ($start -and $end) {
+                    $durationSeconds = [int][math]::Max(0, ($end - $start).TotalSeconds)
+                    $summary = [ordered]@{
+                        timer_id = $timer.id
+                        session_id = $latest.id
+                        label = $timer.label
+                        duration_seconds = $durationSeconds
+                        start = $latest.start
+                        end = $latest.end
+                    }
+                }
+            }
+        }
+    }
+    if ($summary) {
+        $timerForTotal = Get-TimerById -TimerId $summary.timer_id
+        $totalSeconds = if ($timerForTotal) { Timer-ElapsedTodaySeconds -Timer $timerForTotal } else { [int]$summary.duration_seconds }
+        $note = New-NoteDialog -Label $summary.label -Duration (Format-Hms -TotalSeconds $totalSeconds) -SessionDuration (Format-Hms -TotalSeconds $summary.duration_seconds)
+        if ($null -eq $note) { $note = "" }
+        Log-StoppedSession -Summary $summary -TotalSeconds $totalSeconds -Note $note
+    }
 
-    $State.data.timers = @(
-        $State.data.timers | Where-Object { $_ -and (Get-PropValue -Obj $_ -Name "id") -ne $summary.timer_id }
-    )
+    $removeId = $null
+    if ($summary) {
+        $removeId = $summary.timer_id
+    } else {
+        $removeId = $State.data.active_timer_id
+    }
+    if ($removeId) {
+        $State.data.timers = @(
+            $State.data.timers | Where-Object { $_ -and (Get-PropValue -Obj $_ -Name "id") -ne $removeId }
+        )
+    }
     $State.data.active_timer_id = $null
     $State.data.active_session_id = $null
     if ($State.data.timers.Count -eq 1) {
@@ -926,8 +1056,6 @@ function Stop-Timer {
         $remainingId = Get-PropValue -Obj $remaining -Name "id"
         if ($remainingId) { $State.data.active_timer_id = $remainingId }
     }
-    Stop-ActiveStopwatch
-    $State.runtime.active_stopwatch = $null
     Save-Data
 }
 
@@ -935,43 +1063,9 @@ function Reset-AllData {
     $confirm = New-ConfirmDialog -Title "Reset All Data" -Message "Clear all timers and totals? This cannot be undone."
     if (-not $confirm) { return }
     $State.data = New-DefaultData
-    $State.runtime.next_checkin_at = $null
     $State.runtime.last_autosave_at = $null
     $State.runtime.recovery_prompt = $null
-    $State.runtime.active_timer_id = $null
-    $State.runtime.active_base_seconds = 0
-    $State.runtime.active_start_utc = $null
-    Stop-ActiveStopwatch
-    $State.runtime.active_stopwatch = $null
     Save-Data
-}
-
-function Maybe-RunReminder {
-    if (-not $State.data.active_timer_id) {
-        $State.runtime.next_checkin_at = $null
-        return
-    }
-    if (-not $State.data.active_session_id) { return }
-    if (-not $State.runtime.next_checkin_at) {
-        $minutes = [int]$State.settings.check_in_minutes
-        if ($minutes -lt 1) { $minutes = $CheckInMinutes }
-        $State.runtime.next_checkin_at = (Utc-Now).AddMinutes($minutes)
-        return
-    }
-    $now = Utc-Now
-    if ($now -lt $State.runtime.next_checkin_at) { return }
-
-    $timer = Get-ActiveTimer
-    if (-not $timer) { return }
-    $elapsed = Format-Hms -TotalSeconds (Active-ElapsedSeconds-Stable)
-    $response = New-ReminderDialog -Label $timer.label -Elapsed $elapsed
-    if ($response -eq "stop") {
-        Stop-Timer
-        return
-    }
-    $minutes = [int]$State.settings.check_in_minutes
-    if ($minutes -lt 1) { $minutes = $CheckInMinutes }
-    $State.runtime.next_checkin_at = (Utc-Now).AddMinutes($minutes)
 }
 
 function Maybe-Autosave {
@@ -996,6 +1090,12 @@ $trayItemNew = $trayMenu.Items.Add("New Timer")
 $trayItemSwitch = $trayMenu.Items.Add("Switch Timer")
 $trayItemStop = $trayMenu.Items.Add("Stop Timer")
 $trayMenu.Items.Add("-") | Out-Null
+$trayItemFont = New-Object System.Windows.Forms.ToolStripMenuItem("Floating Font Size")
+$trayItemFontSmall = New-Object System.Windows.Forms.ToolStripMenuItem("Small (Default)")
+$trayItemFontMed = New-Object System.Windows.Forms.ToolStripMenuItem("Medium (+20%)")
+$trayItemFontLarge = New-Object System.Windows.Forms.ToolStripMenuItem("Large (+40%)")
+$trayItemFont.DropDownItems.AddRange(@($trayItemFontSmall, $trayItemFontMed, $trayItemFontLarge))
+$trayMenu.Items.Add($trayItemFont) | Out-Null
 $trayItemResetAll = $trayMenu.Items.Add("Reset All Data")
 $trayItemQuit = $trayMenu.Items.Add("Quit")
 
@@ -1009,11 +1109,33 @@ $trayItemStartPause.Add_Click({ Invoke-Safe { Start-OrPause } })
 $trayItemNew.Add_Click({ Invoke-Safe { New-Timer } })
 $trayItemSwitch.Add_Click({ Invoke-Safe { Switch-Timer } })
 $trayItemStop.Add_Click({ Invoke-Safe { Stop-Timer } })
+$trayItemFontSmall.Add_Click({
+    Invoke-Safe {
+        $State.settings.floating_font_scale = 1.0
+        Save-Settings
+    }
+})
+$trayItemFontMed.Add_Click({
+    Invoke-Safe {
+        $State.settings.floating_font_scale = 1.2
+        Save-Settings
+    }
+})
+$trayItemFontLarge.Add_Click({
+    Invoke-Safe {
+        $State.settings.floating_font_scale = 1.4
+        Save-Settings
+    }
+})
 $trayItemResetAll.Add_Click({ Invoke-Safe { Reset-AllData } })
 $trayItemQuit.Add_Click({
     Stop-And-SaveAll
     $tray.Visible = $false
     $tray.Dispose()
+    if ($floatingWindow -and -not $floatingWindow.IsDisposed) {
+        $floatingWindow.Close()
+        $floatingWindow.Dispose()
+    }
     $hotKeyForm.Close()
 })
 
@@ -1063,13 +1185,57 @@ $hotKeyForm.Add_FormClosing({
     [HotKeyWindow]::UnregisterHotKey($handle, $HOTKEY_STOP) | Out-Null
 })
 
+$floatingWindow = New-Object System.Windows.Forms.Form
+$floatingWindow.Text = "MyTime"
+$floatingWindow.StartPosition = "Manual"
+$floatingWindow.TopMost = $true
+$floatingWindow.FormBorderStyle = "None"
+$floatingWindow.ShowInTaskbar = $false
+$floatingWindow.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$floatingWindow.ForeColor = [System.Drawing.Color]::White
+$floatingWindow.Opacity = 0.9
+$floatingWindow.Location = New-Object System.Drawing.Point(20, 20)
+$floatingWindow.AutoSize = $false
+$floatingWindow.AutoSizeMode = "GrowAndShrink"
+$floatingWindow.MinimumSize = New-Object System.Drawing.Size(260, 60)
+$floatingWindow.MaximumSize = New-Object System.Drawing.Size(260, 2000)
+
+$floatingPanel = New-Object System.Windows.Forms.FlowLayoutPanel
+$floatingPanel.Dock = "Fill"
+$floatingPanel.AutoScroll = $false
+$floatingPanel.AutoSize = $false
+$floatingPanel.AutoSizeMode = "GrowAndShrink"
+$floatingPanel.WrapContents = $false
+$floatingPanel.FlowDirection = [System.Windows.Forms.FlowDirection]::TopDown
+$floatingPanel.Padding = New-Object System.Windows.Forms.Padding(4, 4, 4, 4)
+$floatingPanel.BackColor = $floatingWindow.BackColor
+$floatingWindow.Controls.Add($floatingPanel)
+
+$floatingWindow.Add_MouseDown({
+    if ($_.Button -eq [System.Windows.Forms.MouseButtons]::Left) {
+        [Win32Drag]::ReleaseCapture() | Out-Null
+        [Win32Drag]::SendMessage($floatingWindow.Handle, 0x00A1, [IntPtr]2, [IntPtr]0) | Out-Null
+    }
+})
+$floatingPanel.Add_MouseDown({
+    if ($_.Button -eq [System.Windows.Forms.MouseButtons]::Left) {
+        [Win32Drag]::ReleaseCapture() | Out-Null
+        [Win32Drag]::SendMessage($floatingWindow.Handle, 0x00A1, [IntPtr]2, [IntPtr]0) | Out-Null
+    }
+})
+Update-FloatingWindow -Window $floatingWindow -Panel $floatingPanel
+$floatingWindow.Show()
+
 $timer = New-Object System.Windows.Forms.Timer
 $timer.Interval = 1000
 $timer.Add_Tick({
     Invoke-Safe {
-        Maybe-RunReminder
+        $trayItemFontSmall.Checked = ($State.settings.floating_font_scale -eq 1.0)
+        $trayItemFontMed.Checked = ($State.settings.floating_font_scale -eq 1.2)
+        $trayItemFontLarge.Checked = ($State.settings.floating_font_scale -eq 1.4)
         Maybe-Autosave
         Update-TrayTooltip -Tray $tray
+        Update-FloatingWindow -Window $floatingWindow -Panel $floatingPanel
     }
 })
 $timer.Start()
