@@ -1,0 +1,193 @@
+[2026-02-06T15:48:31] session_elapsed_s=28 active_elapsed_s=28 today_total_s=28 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T15:48:31] tray_assign elapsed_s=28 total_s=28 text='Running Test 00:00:28 | Total 00:00:28'
+[2026-02-06T15:48:31] float_assign elapsed_s=28 text='00:00:28'
+[2026-02-06T15:48:32] session_elapsed_s=29 active_elapsed_s=29 today_total_s=29 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T15:48:32] tray_assign elapsed_s=29 total_s=29 text='Running Test 00:00:29 | Total 00:00:29'
+[2026-02-06T15:48:32] float_assign elapsed_s=29 text='00:00:29'
+[2026-02-06T15:48:33] session_elapsed_s=30 active_elapsed_s=30 today_total_s=30 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T15:48:33] tray_assign elapsed_s=30 total_s=30 text='Running Test 00:00:30 | Total 00:00:30'
+[2026-02-06T15:48:33] float_assign elapsed_s=30 text='00:00:30'
+[2026-02-06T15:48:34] session_elapsed_s=31 active_elapsed_s=31 today_total_s=31 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T15:48:34] tray_assign elapsed_s=31 total_s=31 text='Running Test 00:00:31 | Total 00:00:31'
+[2026-02-06T15:48:34] float_assign elapsed_s=31 text='00:00:31'
+[2026-02-06T15:48:35] session_elapsed_s=32 active_elapsed_s=32 today_total_s=32 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T15:48:35] tray_assign elapsed_s=32 total_s=32 text='Running Test 00:00:32 | Total 00:00:32'
+[2026-02-06T15:48:35] float_assign elapsed_s=32 text='00:00:32'
+[2026-02-06T15:49:31] session_elapsed_s=88 active_elapsed_s=88 today_total_s=88 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T15:49:31] tray_assign elapsed_s=88 total_s=88 text='Running Test 00:01:28 | Total 00:01:28'
+[2026-02-06T15:49:31] float_assign elapsed_s=88 text='00:01:28'
+[2026-02-06T15:49:32] session_elapsed_s=89 active_elapsed_s=89 today_total_s=89 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T15:49:32] tray_assign elapsed_s=89 total_s=89 text='Running Test 00:01:29 | Total 00:01:29'
+[2026-02-06T15:49:32] float_assign elapsed_s=89 text='00:01:29'
+[2026-02-06T15:49:33] session_elapsed_s=90 active_elapsed_s=90 today_total_s=90 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T15:49:33] tray_assign elapsed_s=90 total_s=90 text='Running Test 00:01:30 | Total 00:01:30'
+[2026-02-06T15:49:33] float_assign elapsed_s=90 text='00:01:30'
+[2026-02-06T15:49:34] session_elapsed_s=91 active_elapsed_s=91 today_total_s=91 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T15:49:34] tray_assign elapsed_s=91 total_s=91 text='Running Test 00:01:31 | Total 00:01:31'
+[2026-02-06T15:49:34] float_assign elapsed_s=91 text='00:01:31'
+[2026-02-06T15:49:35] session_elapsed_s=92 active_elapsed_s=92 today_total_s=92 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T15:49:35] tray_assign elapsed_s=92 total_s=92 text='Running Test 00:01:32 | Total 00:01:32'
+[2026-02-06T15:49:35] float_assign elapsed_s=92 text='00:01:32'
+[2026-02-06T15:50:20] session_elapsed_s=28 active_elapsed_s=28 today_total_s=28 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T15:50:20] tray_assign elapsed_s=28 total_s=28 text='Running Test 00:00:28 | Total 00:00:28'
+[2026-02-06T15:50:20] float_assign elapsed_s=28 text='00:00:28'
+[2026-02-06T15:50:21] session_elapsed_s=29 active_elapsed_s=29 today_total_s=29 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T15:50:21] tray_assign elapsed_s=29 total_s=29 text='Running Test 00:00:29 | Total 00:00:29'
+[2026-02-06T15:50:21] float_assign elapsed_s=29 text='00:00:29'
+[2026-02-06T15:50:22] session_elapsed_s=30 active_elapsed_s=30 today_total_s=30 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T15:50:22] tray_assign elapsed_s=30 total_s=30 text='Running Test 00:00:30 | Total 00:00:30'
+[2026-02-06T15:50:22] float_assign elapsed_s=30 text='00:00:30'
+[2026-02-06T15:50:23] session_elapsed_s=31 active_elapsed_s=31 today_total_s=31 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T15:50:23] tray_assign elapsed_s=31 total_s=31 text='Running Test 00:00:31 | Total 00:00:31'
+[2026-02-06T15:50:23] float_assign elapsed_s=31 text='00:00:31'
+[2026-02-06T15:50:24] session_elapsed_s=32 active_elapsed_s=32 today_total_s=32 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T15:50:24] tray_assign elapsed_s=32 total_s=32 text='Running Test 00:00:32 | Total 00:00:32'
+[2026-02-06T15:50:24] float_assign elapsed_s=32 text='00:00:32'
+[2026-02-06T15:51:20] session_elapsed_s=88 active_elapsed_s=88 today_total_s=88 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T15:51:20] tray_assign elapsed_s=88 total_s=88 text='Running Test 00:01:28 | Total 00:01:28'
+[2026-02-06T15:51:20] float_assign elapsed_s=88 text='00:01:28'
+[2026-02-06T15:51:21] session_elapsed_s=89 active_elapsed_s=89 today_total_s=89 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T15:51:21] tray_assign elapsed_s=89 total_s=89 text='Running Test 00:01:29 | Total 00:01:29'
+[2026-02-06T15:51:21] float_assign elapsed_s=89 text='00:01:29'
+[2026-02-06T15:51:22] session_elapsed_s=90 active_elapsed_s=90 today_total_s=90 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T15:51:22] tray_assign elapsed_s=90 total_s=90 text='Running Test 00:01:30 | Total 00:01:30'
+[2026-02-06T15:51:22] float_assign elapsed_s=90 text='00:01:30'
+[2026-02-06T15:51:23] session_elapsed_s=91 active_elapsed_s=91 today_total_s=91 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T15:51:23] tray_assign elapsed_s=91 total_s=91 text='Running Test 00:01:31 | Total 00:01:31'
+[2026-02-06T15:51:23] float_assign elapsed_s=91 text='00:01:31'
+[2026-02-06T15:51:24] session_elapsed_s=92 active_elapsed_s=92 today_total_s=92 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T15:51:24] tray_assign elapsed_s=92 total_s=92 text='Running Test 00:01:32 | Total 00:01:32'
+[2026-02-06T15:51:24] float_assign elapsed_s=92 text='00:01:32'
+[2026-02-06T16:29:07] session_elapsed_s=28 active_elapsed_s=28 today_total_s=28 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T16:29:07] tray_assign elapsed_s=28 total_s=28 text='Running Test 00:00:28 | Total 00:00:28'
+[2026-02-06T16:29:07] float_assign elapsed_s=28 text='00:00:28'
+[2026-02-06T16:29:08] session_elapsed_s=29 active_elapsed_s=29 today_total_s=29 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T16:29:08] tray_assign elapsed_s=29 total_s=29 text='Running Test 00:00:29 | Total 00:00:29'
+[2026-02-06T16:29:08] float_assign elapsed_s=29 text='00:00:29'
+[2026-02-06T16:29:09] session_elapsed_s=30 active_elapsed_s=30 today_total_s=30 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T16:29:09] tray_assign elapsed_s=30 total_s=30 text='Running Test 00:00:30 | Total 00:00:30'
+[2026-02-06T16:29:09] float_assign elapsed_s=30 text='00:00:30'
+[2026-02-06T16:29:10] session_elapsed_s=31 active_elapsed_s=31 today_total_s=31 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T16:29:10] tray_assign elapsed_s=31 total_s=31 text='Running Test 00:00:31 | Total 00:00:31'
+[2026-02-06T16:29:10] float_assign elapsed_s=31 text='00:00:31'
+[2026-02-06T16:29:11] session_elapsed_s=32 active_elapsed_s=32 today_total_s=32 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T16:29:11] tray_assign elapsed_s=32 total_s=32 text='Running Test 00:00:32 | Total 00:00:32'
+[2026-02-06T16:29:11] float_assign elapsed_s=32 text='00:00:32'
+[2026-02-06T16:30:07] session_elapsed_s=88 active_elapsed_s=88 today_total_s=88 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T16:30:07] tray_assign elapsed_s=88 total_s=88 text='Running Test 00:01:28 | Total 00:01:28'
+[2026-02-06T16:30:07] float_assign elapsed_s=88 text='00:01:28'
+[2026-02-06T16:30:08] session_elapsed_s=89 active_elapsed_s=89 today_total_s=89 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T16:30:08] tray_assign elapsed_s=89 total_s=89 text='Running Test 00:01:29 | Total 00:01:29'
+[2026-02-06T16:30:08] float_assign elapsed_s=89 text='00:01:29'
+[2026-02-06T16:30:09] session_elapsed_s=90 active_elapsed_s=90 today_total_s=90 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T16:30:09] tray_assign elapsed_s=90 total_s=90 text='Running Test 00:01:30 | Total 00:01:30'
+[2026-02-06T16:30:09] float_assign elapsed_s=90 text='00:01:30'
+[2026-02-06T16:30:10] session_elapsed_s=91 active_elapsed_s=91 today_total_s=91 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T16:30:10] tray_assign elapsed_s=91 total_s=91 text='Running Test 00:01:31 | Total 00:01:31'
+[2026-02-06T16:30:10] float_assign elapsed_s=91 text='00:01:31'
+[2026-02-06T16:30:11] session_elapsed_s=92 active_elapsed_s=92 today_total_s=92 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T16:30:11] tray_assign elapsed_s=92 total_s=92 text='Running Test 00:01:32 | Total 00:01:32'
+[2026-02-06T16:30:11] float_assign elapsed_s=92 text='00:01:32'
+[2026-02-06T16:31:07] session_elapsed_s=148 active_elapsed_s=148 today_total_s=148 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T16:31:07] tray_assign elapsed_s=148 total_s=148 text='Running Test 00:02:28 | Total 00:02:28'
+[2026-02-06T16:31:07] float_assign elapsed_s=148 text='00:02:28'
+[2026-02-06T16:31:08] session_elapsed_s=149 active_elapsed_s=149 today_total_s=149 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T16:31:08] tray_assign elapsed_s=149 total_s=149 text='Running Test 00:02:29 | Total 00:02:29'
+[2026-02-06T16:31:08] float_assign elapsed_s=149 text='00:02:29'
+[2026-02-06T16:31:09] session_elapsed_s=150 active_elapsed_s=150 today_total_s=150 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T16:31:09] tray_assign elapsed_s=150 total_s=150 text='Running Test 00:02:30 | Total 00:02:30'
+[2026-02-06T16:31:09] float_assign elapsed_s=150 text='00:02:30'
+[2026-02-06T16:31:10] session_elapsed_s=151 active_elapsed_s=151 today_total_s=151 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T16:31:10] tray_assign elapsed_s=151 total_s=151 text='Running Test 00:02:31 | Total 00:02:31'
+[2026-02-06T16:31:10] float_assign elapsed_s=151 text='00:02:31'
+[2026-02-06T16:31:11] session_elapsed_s=152 active_elapsed_s=152 today_total_s=152 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T16:31:11] tray_assign elapsed_s=152 total_s=152 text='Running Test 00:02:32 | Total 00:02:32'
+[2026-02-06T16:31:11] float_assign elapsed_s=152 text='00:02:32'
+[2026-02-06T16:32:07] session_elapsed_s=208 active_elapsed_s=208 today_total_s=208 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T16:32:07] tray_assign elapsed_s=208 total_s=208 text='Running Test 00:03:28 | Total 00:03:28'
+[2026-02-06T16:32:07] float_assign elapsed_s=208 text='00:03:28'
+[2026-02-06T16:32:08] session_elapsed_s=209 active_elapsed_s=209 today_total_s=209 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T16:32:08] tray_assign elapsed_s=209 total_s=209 text='Running Test 00:03:29 | Total 00:03:29'
+[2026-02-06T16:32:08] float_assign elapsed_s=209 text='00:03:29'
+[2026-02-06T16:32:09] session_elapsed_s=210 active_elapsed_s=210 today_total_s=210 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T16:32:09] tray_assign elapsed_s=210 total_s=210 text='Running Test 00:03:30 | Total 00:03:30'
+[2026-02-06T16:32:09] float_assign elapsed_s=210 text='00:03:30'
+[2026-02-06T16:32:10] session_elapsed_s=211 active_elapsed_s=211 today_total_s=211 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T16:32:10] tray_assign elapsed_s=211 total_s=211 text='Running Test 00:03:31 | Total 00:03:31'
+[2026-02-06T16:32:10] float_assign elapsed_s=211 text='00:03:31'
+[2026-02-06T16:32:11] session_elapsed_s=212 active_elapsed_s=212 today_total_s=212 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T16:32:11] tray_assign elapsed_s=212 total_s=212 text='Running Test 00:03:32 | Total 00:03:32'
+[2026-02-06T16:32:11] float_assign elapsed_s=212 text='00:03:32'
+[2026-02-06T16:33:07] session_elapsed_s=268 active_elapsed_s=268 today_total_s=268 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T16:33:07] tray_assign elapsed_s=268 total_s=268 text='Running Test 00:04:28 | Total 00:04:28'
+[2026-02-06T16:33:07] float_assign elapsed_s=268 text='00:04:28'
+[2026-02-06T16:33:08] session_elapsed_s=269 active_elapsed_s=269 today_total_s=269 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T16:33:08] tray_assign elapsed_s=269 total_s=269 text='Running Test 00:04:29 | Total 00:04:29'
+[2026-02-06T16:33:08] float_assign elapsed_s=269 text='00:04:29'
+[2026-02-06T16:33:09] session_elapsed_s=270 active_elapsed_s=270 today_total_s=270 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T16:33:09] tray_assign elapsed_s=270 total_s=270 text='Running Test 00:04:30 | Total 00:04:30'
+[2026-02-06T16:33:09] float_assign elapsed_s=270 text='00:04:30'
+[2026-02-06T16:33:10] session_elapsed_s=271 active_elapsed_s=271 today_total_s=271 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T16:33:10] tray_assign elapsed_s=271 total_s=271 text='Running Test 00:04:31 | Total 00:04:31'
+[2026-02-06T16:33:10] float_assign elapsed_s=271 text='00:04:31'
+[2026-02-06T16:33:11] session_elapsed_s=272 active_elapsed_s=272 today_total_s=272 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T16:33:11] tray_assign elapsed_s=272 total_s=272 text='Running Test 00:04:32 | Total 00:04:32'
+[2026-02-06T16:33:11] float_assign elapsed_s=272 text='00:04:32'
+[2026-02-06T16:34:07] session_elapsed_s=328 active_elapsed_s=328 today_total_s=328 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T16:34:07] tray_assign elapsed_s=328 total_s=328 text='Running Test 00:05:28 | Total 00:05:28'
+[2026-02-06T16:34:07] float_assign elapsed_s=328 text='00:05:28'
+[2026-02-06T16:34:08] session_elapsed_s=329 active_elapsed_s=329 today_total_s=329 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T16:34:08] tray_assign elapsed_s=329 total_s=329 text='Running Test 00:05:29 | Total 00:05:29'
+[2026-02-06T16:34:08] float_assign elapsed_s=329 text='00:05:29'
+[2026-02-06T16:34:09] session_elapsed_s=330 active_elapsed_s=330 today_total_s=330 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T16:34:09] tray_assign elapsed_s=330 total_s=330 text='Running Test 00:05:30 | Total 00:05:30'
+[2026-02-06T16:34:09] float_assign elapsed_s=330 text='00:05:30'
+[2026-02-06T16:34:10] session_elapsed_s=331 active_elapsed_s=331 today_total_s=331 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T16:34:10] tray_assign elapsed_s=331 total_s=331 text='Running Test 00:05:31 | Total 00:05:31'
+[2026-02-06T16:34:10] float_assign elapsed_s=331 text='00:05:31'
+[2026-02-06T16:34:11] session_elapsed_s=332 active_elapsed_s=332 today_total_s=332 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T16:34:11] tray_assign elapsed_s=332 total_s=332 text='Running Test 00:05:32 | Total 00:05:32'
+[2026-02-06T16:34:11] float_assign elapsed_s=332 text='00:05:32'
+[2026-02-06T16:35:07] session_elapsed_s=388 active_elapsed_s=388 today_total_s=388 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T16:35:07] tray_assign elapsed_s=389 total_s=389 text='Running Test 00:06:29 | Total 00:06:29'
+[2026-02-06T16:35:07] float_assign elapsed_s=389 text='00:06:29'
+[2026-02-06T16:35:08] session_elapsed_s=389 active_elapsed_s=389 today_total_s=389 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T16:35:08] tray_assign elapsed_s=390 total_s=390 text='Running Test 00:06:30 | Total 00:06:30'
+[2026-02-06T16:35:08] float_assign elapsed_s=390 text='00:06:30'
+[2026-02-06T16:35:09] session_elapsed_s=390 active_elapsed_s=390 today_total_s=390 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T16:35:09] tray_assign elapsed_s=391 total_s=391 text='Running Test 00:06:31 | Total 00:06:31'
+[2026-02-06T16:35:09] float_assign elapsed_s=391 text='00:06:31'
+[2026-02-06T16:35:10] session_elapsed_s=391 active_elapsed_s=391 today_total_s=391 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T16:35:10] tray_assign elapsed_s=392 total_s=392 text='Running Test 00:06:32 | Total 00:06:32'
+[2026-02-06T16:35:10] float_assign elapsed_s=392 text='00:06:32'
+[2026-02-06T16:35:11] session_elapsed_s=392 active_elapsed_s=392 today_total_s=392 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T16:36:07] session_elapsed_s=448 active_elapsed_s=448 today_total_s=448 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T16:36:07] tray_assign elapsed_s=448 total_s=448 text='Running Test 00:07:28 | Total 00:07:28'
+[2026-02-06T16:36:07] float_assign elapsed_s=448 text='00:07:28'
+[2026-02-06T16:36:08] session_elapsed_s=449 active_elapsed_s=449 today_total_s=449 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T16:36:08] tray_assign elapsed_s=449 total_s=449 text='Running Test 00:07:29 | Total 00:07:29'
+[2026-02-06T16:36:08] float_assign elapsed_s=449 text='00:07:29'
+[2026-02-06T16:36:09] session_elapsed_s=450 active_elapsed_s=450 today_total_s=450 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T16:36:09] tray_assign elapsed_s=450 total_s=450 text='Running Test 00:07:30 | Total 00:07:30'
+[2026-02-06T16:36:09] float_assign elapsed_s=450 text='00:07:30'
+[2026-02-06T16:36:10] session_elapsed_s=451 active_elapsed_s=451 today_total_s=451 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T16:36:10] tray_assign elapsed_s=451 total_s=451 text='Running Test 00:07:31 | Total 00:07:31'
+[2026-02-06T16:36:10] float_assign elapsed_s=451 text='00:07:31'
+[2026-02-06T16:36:11] session_elapsed_s=452 active_elapsed_s=452 today_total_s=452 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T16:36:11] tray_assign elapsed_s=452 total_s=452 text='Running Test 00:07:32 | Total 00:07:32'
+[2026-02-06T16:36:11] float_assign elapsed_s=452 text='00:07:32'
+[2026-02-06T16:37:07] session_elapsed_s=508 active_elapsed_s=508 today_total_s=508 base_active_s=0 cache_total_s=0 mod60=28
+[2026-02-06T16:37:07] tray_assign elapsed_s=508 total_s=508 text='Running Test 00:08:28 | Total 00:08:28'
+[2026-02-06T16:37:07] float_assign elapsed_s=508 text='00:08:28'
+[2026-02-06T16:37:08] session_elapsed_s=509 active_elapsed_s=509 today_total_s=509 base_active_s=0 cache_total_s=0 mod60=29
+[2026-02-06T16:37:08] tray_assign elapsed_s=509 total_s=509 text='Running Test 00:08:29 | Total 00:08:29'
+[2026-02-06T16:37:08] float_assign elapsed_s=509 text='00:08:29'
+[2026-02-06T16:37:09] session_elapsed_s=510 active_elapsed_s=510 today_total_s=510 base_active_s=0 cache_total_s=0 mod60=30
+[2026-02-06T16:37:09] tray_assign elapsed_s=510 total_s=510 text='Running Test 00:08:30 | Total 00:08:30'
+[2026-02-06T16:37:09] float_assign elapsed_s=510 text='00:08:30'
+[2026-02-06T16:37:10] session_elapsed_s=511 active_elapsed_s=511 today_total_s=511 base_active_s=0 cache_total_s=0 mod60=31
+[2026-02-06T16:37:10] tray_assign elapsed_s=511 total_s=511 text='Running Test 00:08:31 | Total 00:08:31'
+[2026-02-06T16:37:10] float_assign elapsed_s=511 text='00:08:31'
+[2026-02-06T16:37:11] session_elapsed_s=512 active_elapsed_s=512 today_total_s=512 base_active_s=0 cache_total_s=0 mod60=32
+[2026-02-06T16:37:11] tray_assign elapsed_s=512 total_s=512 text='Running Test 00:08:32 | Total 00:08:32'
+[2026-02-06T16:37:11] float_assign elapsed_s=512 text='00:08:32'

@@ -11,11 +11,9 @@
 
 # MyTime (PowerShell Tray App)
 
-Global-hotkey ticket timer with desktop logging and an always-on-top floating timer window. Runs as a PowerShell script so it avoids unsigned executable blocks.
+Global-hotkey ticket timer with export logging and an always-on-top floating timer window. Runs as a PowerShell script so it avoids unsigned executable blocks.
 
 **Status:** Active development. Not ready for production use.
-
-Important: timekeeping accuracy still needs verification. More testing is required.
 
 ## Run
 
@@ -34,10 +32,11 @@ powershell.exe -ExecutionPolicy Bypass -File .\MyTime.ps1
 ## Floating Window
 
 - Always-on-top, draggable window listing all timers.
-- Each timer shows its label and today’s total time for that ticket.
+- Each timer shows its label and total time for that ticket (ended sessions + current session if running).
 - Window height grows/shrinks as timers are added/removed.
 - Font: Cascadia Mono (falls back to Segoe UI).
 - Tray menu: `Floating Font Size` with Default, +20%, +40%.
+- Rounded corners for the window and timer cards.
 
 ## Switch Timer Display
 
@@ -45,27 +44,28 @@ Switch Timer shows each entry as:
 
 `Timer Name - Time - ID`
 
-Time is the total for today for that ticket.
+Time is the total for that ticket.
 
 ## Data + Logs
 
 - Data: `%APPDATA%\MyTime\data.json`
 - Settings: `%APPDATA%\MyTime\settings.json`
-- Logs on Desktop:
+- Export logs (default): `C:\MyTime`
   - `TicketTimeLog_YYYY-MM-DD.txt`
   - `<TICKETLABEL>_YYYY-MM-DD.txt`
+- Export directory override: set `desktop_path_override` in `%APPDATA%\MyTime\settings.json` to an absolute path.
 
 Stop log entries include:
 
-- Total (today’s total for that ticket)
+- Total (ticket total)
 - Session (last session duration)
 
 ## Reset
 
-Use the tray menu item **Reset All Data** to clear all timers and today totals.
+Use the tray menu item **Reset All Data** to clear all timers and totals.
 
 ## Development Notes
 
 This project is under active development and not ready for general use. Known gaps:
 
-- Timekeeping accuracy requires additional testing.
+- This is a single-script tray app; there is no installer and it runs in the background as a PowerShell process.
