@@ -122,7 +122,8 @@ function New-Id {
 }
 
 function Utc-Now {
-    return (Get-Date).ToUniversalTime()
+    # Wall-clock UTC. Elapsed time is handled separately using a monotonic Stopwatch.
+    return [DateTime]::UtcNow
 }
 
 function To-UtcString {
@@ -433,13 +434,22 @@ function Close-ActiveSession {
         return $null
     }
 
+    # Ensure elapsed seconds are flushed into the running session before closing.
+    Tick-Timekeeping
+
     if (-not $session.end) {
         $session.end = To-UtcString $At
     }
 
-    $start = From-UtcString $session.start
-    $end = From-UtcString $session.end
-    $durationSeconds = [math]::Max(0, ($end - $start).TotalSeconds)
+    if (-not ($session.PSObject.Properties.Name -contains "duration_seconds")) {
+        $session | Add-Member -NotePropertyName duration_seconds -NotePropertyValue 0
+    }
+    $durationSeconds = 0
+    try { $durationSeconds = [int]$session.duration_seconds } catch { $durationSeconds = 0 }
+    if ($durationSeconds -lt 0) {
+        $durationSeconds = 0
+        $session.duration_seconds = 0
+    }
 
     $summary = [ordered]@{
         timer_id = $timer.id
@@ -467,6 +477,7 @@ function Start-TimerInternal {
         id = New-Id
         start = To-UtcString $now
         end = $null
+        duration_seconds = 0
         note = ""
         exported = $false
     }
@@ -474,7 +485,6 @@ function Start-TimerInternal {
 
     $State.data.active_timer_id = [string]$TimerId
     $State.data.active_session_id = $session.id
-    $State.runtime.last_autosave_at = $now
     Save-Data
 }
 
@@ -519,61 +529,160 @@ function Active-ElapsedSeconds {
     return (Timer-ElapsedTodaySeconds -Timer $timer)
 }
 
+function Ensure-RuntimeClock {
+    if (-not $State -or -not $State.runtime) { return }
+
+    if (-not $State.runtime.Contains("clock_sw") -or -not $State.runtime.clock_sw) {
+        $State.runtime.clock_sw = [System.Diagnostics.Stopwatch]::StartNew()
+    }
+    if (-not $State.runtime.Contains("clock_lock") -or -not $State.runtime.clock_lock) {
+        $State.runtime.clock_lock = New-Object object
+    }
+    if (-not $State.runtime.Contains("clock_last_tick_s")) { $State.runtime.clock_last_tick_s = 0 }
+    if (-not $State.runtime.Contains("last_autosave_tick_s")) { $State.runtime.last_autosave_tick_s = 0 }
+    if (-not $State.runtime.Contains("cache_day_local") -or -not $State.runtime.cache_day_local) {
+        $State.runtime.cache_day_local = (Get-Date).Date
+    }
+    if (-not $State.runtime.Contains("cache_by_timer") -or -not ($State.runtime.cache_by_timer -is [System.Collections.IDictionary])) {
+        $State.runtime.cache_by_timer = @{}
+    }
+    if (-not $State.runtime.Contains("cache_total")) { $State.runtime.cache_total = 0 }
+}
+
+function Get-ClockTickSeconds {
+    Ensure-RuntimeClock
+    if (-not $State.runtime.clock_sw) { return 0 }
+    return [int][math]::Floor($State.runtime.clock_sw.Elapsed.TotalSeconds)
+}
+
+function Rebuild-TodayCache {
+    param([DateTime]$DayLocal)
+    Ensure-RuntimeClock
+
+    $lock = $State.runtime.clock_lock
+    [System.Threading.Monitor]::Enter($lock)
+    try {
+        if (-not $DayLocal) { $DayLocal = (Get-Date).Date }
+        $dayStartUtc = $DayLocal.ToUniversalTime()
+        $dayEndUtc = $DayLocal.AddDays(1).ToUniversalTime()
+
+        $activeTimerId = [string]$State.data.active_timer_id
+        $activeSessionId = [string]$State.data.active_session_id
+        $nowUtc = Utc-Now
+
+        $cache = @{}
+        $grand = 0
+
+        foreach ($timer in @($State.data.timers | Where-Object { $_ })) {
+            $timerId = [string](Get-PropValue -Obj $timer -Name "id")
+            if (-not $timerId) { continue }
+
+            $timerTotal = 0
+            foreach ($session in @($timer.sessions | Where-Object { $_ })) {
+                $start = From-UtcString (Get-PropValue -Obj $session -Name "start")
+                if (-not $start) { continue }
+
+                $end = $null
+                $endStr = Get-PropValue -Obj $session -Name "end"
+                if ($endStr) {
+                    $end = From-UtcString $endStr
+                } elseif ($activeTimerId -and $activeSessionId -and $timerId -eq $activeTimerId -and ([string](Get-PropValue -Obj $session -Name "id") -eq $activeSessionId)) {
+                    $end = $nowUtc
+                } else {
+                    continue
+                }
+                if (-not $end) { continue }
+
+                if ($end -le $dayStartUtc -or $start -ge $dayEndUtc) { continue }
+                if ($start -lt $dayStartUtc) { $start = $dayStartUtc }
+                if ($end -gt $dayEndUtc) { $end = $dayEndUtc }
+
+                $secs = [int][math]::Floor([math]::Max(0, ($end - $start).TotalSeconds))
+                if ($secs -gt 0) { $timerTotal += $secs }
+            }
+
+            $cache[$timerId] = [int]$timerTotal
+            $grand += $timerTotal
+        }
+
+        $State.runtime.cache_day_local = $DayLocal
+        $State.runtime.cache_by_timer = $cache
+        $State.runtime.cache_total = [int]$grand
+    } finally {
+        [System.Threading.Monitor]::Exit($lock)
+    }
+}
+
+function Tick-Timekeeping {
+    Ensure-RuntimeClock
+    $lock = $State.runtime.clock_lock
+    [System.Threading.Monitor]::Enter($lock)
+    try {
+        $nowTick = Get-ClockTickSeconds
+        $lastTick = [int]$State.runtime.clock_last_tick_s
+        $delta = $nowTick - $lastTick
+        if ($delta -le 0) { return }
+        $State.runtime.clock_last_tick_s = $nowTick
+
+        $todayLocal = (Get-Date).Date
+        if (-not $State.runtime.cache_day_local -or $todayLocal -ne $State.runtime.cache_day_local) {
+            Rebuild-TodayCache -DayLocal $todayLocal
+        }
+
+        if (-not $State.data.active_timer_id -or -not $State.data.active_session_id) { return }
+        $timer = Get-ActiveTimer
+        $session = Get-ActiveSession
+        if (-not $timer -or -not $session) { return }
+
+        if (-not ($session.PSObject.Properties.Name -contains "duration_seconds")) {
+            $session | Add-Member -NotePropertyName duration_seconds -NotePropertyValue 0
+        }
+        $current = 0
+        try { $current = [int]$session.duration_seconds } catch { $current = 0 }
+        $session.duration_seconds = [int]($current + $delta)
+
+        $timerId = [string](Get-PropValue -Obj $timer -Name "id")
+        if (-not $timerId) { return }
+        $cache = $State.runtime.cache_by_timer
+        if (-not ($cache -is [System.Collections.IDictionary])) {
+            $cache = @{}
+            $State.runtime.cache_by_timer = $cache
+        }
+        $prev = 0
+        if ($cache.Contains($timerId)) { $prev = [int]$cache[$timerId] }
+        $cache[$timerId] = [int]($prev + $delta)
+        $State.runtime.cache_total = [int]$State.runtime.cache_total + $delta
+    } finally {
+        [System.Threading.Monitor]::Exit($lock)
+    }
+}
+
 function Timer-ElapsedTodaySeconds {
     param($Timer)
     if (-not $Timer) { return 0 }
-    $activeTimerId = $State.data.active_timer_id
-    $activeSessionId = $State.data.active_session_id
 
-    $todayLocal = (Get-Date).Date
-    $dayStartUtc = $todayLocal.ToUniversalTime()
-    $dayEndUtc = $todayLocal.AddDays(1).ToUniversalTime()
+    Tick-Timekeeping
 
-    $total = 0
-    foreach ($session in $Timer.sessions) {
-        $start = From-UtcString $session.start
-        if (-not $start) { continue }
-        if ($session.end) {
-            $end = From-UtcString $session.end
-        } elseif ($activeTimerId -and $activeSessionId -and $Timer.id -eq $activeTimerId -and $session.id -eq $activeSessionId) {
-            $end = Utc-Now
-        } else {
-            continue
-        }
-        if (-not $end) { continue }
-        if ($end -le $dayStartUtc -or $start -ge $dayEndUtc) { continue }
-        if ($start -lt $dayStartUtc) { $start = $dayStartUtc }
-        if ($end -gt $dayEndUtc) { $end = $dayEndUtc }
-        $total += [math]::Max(0, ($end - $start).TotalSeconds)
+    $timerId = [string](Get-PropValue -Obj $Timer -Name "id")
+    if (-not $timerId) { return 0 }
+    $cache = $State.runtime.cache_by_timer
+    if ($cache -is [System.Collections.IDictionary] -and $cache.Contains($timerId)) {
+        return [int]$cache[$timerId]
     }
-    return [int]$total
+    return 0
 }
 
 function Total-ForToday {
-    $todayLocal = (Get-Date).Date
-    $dayStartLocal = $todayLocal
-    $dayEndLocal = $todayLocal.AddDays(1)
-    $dayStartUtc = $dayStartLocal.ToUniversalTime()
-    $dayEndUtc = $dayEndLocal.ToUniversalTime()
-    $activeTimerId = $State.data.active_timer_id
-    $activeSessionId = $State.data.active_session_id
+    Tick-Timekeeping
+    $cache = $State.runtime.cache_by_timer
+    if (-not ($cache -is [System.Collections.IDictionary])) { return 0 }
+
     $total = 0
-    foreach ($timer in $State.data.timers) {
-        foreach ($session in $timer.sessions) {
-            $start = From-UtcString $session.start
-            if (-not $start) { continue }
-            if ($session.end) {
-                $end = From-UtcString $session.end
-            } elseif ($activeTimerId -and $activeSessionId -and $timer.id -eq $activeTimerId -and $session.id -eq $activeSessionId) {
-                $end = Utc-Now
-            } else {
-                continue
-            }
-            if (-not $end) { continue }
-            if ($end -le $dayStartUtc -or $start -ge $dayEndUtc) { continue }
-            if ($start -lt $dayStartUtc) { $start = $dayStartUtc }
-            if ($end -gt $dayEndUtc) { $end = $dayEndUtc }
-            $total += [math]::Max(0, ($end - $start).TotalSeconds)
+    foreach ($timer in @($State.data.timers | Where-Object { $_ })) {
+        $timerId = [string](Get-PropValue -Obj $timer -Name "id")
+        if (-not $timerId) { continue }
+        if ($cache.Contains($timerId)) {
+            $total += [int]$cache[$timerId]
         }
     }
     return [int]$total
@@ -654,8 +763,23 @@ function Save-PendingSessions {
         foreach ($session in $timer.sessions) {
             if (-not $session.exported -and $session.end) {
                 $endUtc = From-UtcString $session.end
-                $startUtc = From-UtcString $session.start
-                $durationSeconds = [int][math]::Max(0, ($endUtc - $startUtc).TotalSeconds)
+                $durationSeconds = $null
+                $durVal = Get-PropValue -Obj $session -Name "duration_seconds"
+                if ($null -ne $durVal) {
+                    try { $durationSeconds = [int]$durVal } catch { $durationSeconds = $null }
+                }
+                if ($null -eq $durationSeconds -or $durationSeconds -lt 0) {
+                    $startUtc = From-UtcString $session.start
+                    $durationSeconds = 0
+                    if ($startUtc -and $endUtc) {
+                        $durationSeconds = [int][math]::Max(0, ($endUtc - $startUtc).TotalSeconds)
+                    }
+                    if (-not ($session.PSObject.Properties.Name -contains "duration_seconds")) {
+                        $session | Add-Member -NotePropertyName duration_seconds -NotePropertyValue $durationSeconds
+                    } else {
+                        $session.duration_seconds = $durationSeconds
+                    }
+                }
                 $pending += [ordered]@{
                     timer = $timer
                     session = $session
@@ -697,6 +821,14 @@ function Handle-Recovery {
         $session = $timer.sessions | Where-Object { $_.id -eq $prompt.session_id } | Select-Object -First 1
         if ($session) {
             $session.end = To-UtcString $prompt.startup_at
+            if (-not ($session.PSObject.Properties.Name -contains "duration_seconds")) {
+                $session | Add-Member -NotePropertyName duration_seconds -NotePropertyValue 0
+            }
+            $startUtc = From-UtcString $session.start
+            $endUtc = From-UtcString $session.end
+            if ($startUtc -and $endUtc) {
+                $session.duration_seconds = [int][math]::Max(0, ($endUtc - $startUtc).TotalSeconds)
+            }
             if (-not $session.note) {
                 $session.note = "Recovered after app restart"
             } else {
@@ -712,6 +844,7 @@ function Handle-Recovery {
         Save-Data
     }
     $State.runtime.recovery_prompt = $null
+    Rebuild-TodayCache -DayLocal (Get-Date).Date
 }
 
 function Load-State {
@@ -737,6 +870,31 @@ function Load-State {
         if (-not $t.PSObject.Properties["created_at"]) { $t | Add-Member -NotePropertyName created_at -NotePropertyValue (To-UtcString (Utc-Now)) }
         if (-not $t.PSObject.Properties["sessions"]) { $t | Add-Member -NotePropertyName sessions -NotePropertyValue @() }
         if (-not ($t.sessions -is [System.Collections.IEnumerable])) { $t.sessions = @() }
+
+        # Normalize sessions (older data may be missing properties).
+        $normalizedSessions = @()
+        foreach ($s in @($t.sessions | Where-Object { $_ })) {
+            if (-not ($s -is [psobject])) { continue }
+            if (-not $s.PSObject.Properties["id"]) { $s | Add-Member -NotePropertyName id -NotePropertyValue (New-Id) }
+            if (-not $s.PSObject.Properties["start"]) { continue }
+            if (-not $s.PSObject.Properties["end"]) { $s | Add-Member -NotePropertyName end -NotePropertyValue $null }
+            if (-not $s.PSObject.Properties["note"]) { $s | Add-Member -NotePropertyName note -NotePropertyValue "" }
+            if (-not $s.PSObject.Properties["exported"]) { $s | Add-Member -NotePropertyName exported -NotePropertyValue $false }
+            if (-not $s.PSObject.Properties["duration_seconds"]) {
+                $dur = 0
+                if ($s.end) {
+                    $startUtc = From-UtcString $s.start
+                    $endUtc = From-UtcString $s.end
+                    if ($startUtc -and $endUtc) {
+                        $dur = [int][math]::Max(0, ($endUtc - $startUtc).TotalSeconds)
+                    }
+                }
+                $s | Add-Member -NotePropertyName duration_seconds -NotePropertyValue $dur
+            }
+            $normalizedSessions += $s
+        }
+        $t.sessions = $normalizedSessions
+
         $normalizedTimers += $t
     }
     $State.data.timers = $normalizedTimers
@@ -760,6 +918,8 @@ function Load-State {
     }
 
     Save-All
+    Ensure-RuntimeClock
+    Rebuild-TodayCache -DayLocal (Get-Date).Date
 }
 
 function Update-TrayTooltip {
@@ -939,6 +1099,10 @@ function Pause-ActiveSession {
         Save-Data
         return
     }
+    Tick-Timekeeping
+    if (-not ($session.PSObject.Properties.Name -contains "duration_seconds")) {
+        $session | Add-Member -NotePropertyName duration_seconds -NotePropertyValue 0
+    }
     if (-not $session.end) {
         $session.end = To-UtcString (Utc-Now)
     }
@@ -1014,18 +1178,32 @@ function Stop-Timer {
                 if (-not $latest.end) {
                     $latest.end = To-UtcString (Utc-Now)
                 }
-                $start = From-UtcString $latest.start
-                $end = From-UtcString $latest.end
-                if ($start -and $end) {
-                    $durationSeconds = [int][math]::Max(0, ($end - $start).TotalSeconds)
-                    $summary = [ordered]@{
-                        timer_id = $timer.id
-                        session_id = $latest.id
-                        label = $timer.label
-                        duration_seconds = $durationSeconds
-                        start = $latest.start
-                        end = $latest.end
+                $durationSeconds = $null
+                $durVal = Get-PropValue -Obj $latest -Name "duration_seconds"
+                if ($null -ne $durVal) {
+                    try { $durationSeconds = [int]$durVal } catch { $durationSeconds = $null }
+                }
+                if ($null -eq $durationSeconds -or $durationSeconds -lt 0) {
+                    $start = From-UtcString $latest.start
+                    $end = From-UtcString $latest.end
+                    if ($start -and $end) {
+                        $durationSeconds = [int][math]::Max(0, ($end - $start).TotalSeconds)
+                        if (-not ($latest.PSObject.Properties.Name -contains "duration_seconds")) {
+                            $latest | Add-Member -NotePropertyName duration_seconds -NotePropertyValue $durationSeconds
+                        } else {
+                            $latest.duration_seconds = $durationSeconds
+                        }
+                    } else {
+                        $durationSeconds = 0
                     }
+                }
+                $summary = [ordered]@{
+                    timer_id = $timer.id
+                    session_id = $latest.id
+                    label = $timer.label
+                    duration_seconds = [int]$durationSeconds
+                    start = $latest.start
+                    end = $latest.end
                 }
             }
         }
@@ -1065,18 +1243,27 @@ function Reset-AllData {
     $State.data = New-DefaultData
     $State.runtime.last_autosave_at = $null
     $State.runtime.recovery_prompt = $null
+    $State.runtime.clock_sw = $null
+    $State.runtime.clock_lock = $null
+    $State.runtime.clock_last_tick_s = 0
+    $State.runtime.last_autosave_tick_s = $null
+    $State.runtime.cache_day_local = (Get-Date).Date
+    $State.runtime.cache_by_timer = @{}
+    $State.runtime.cache_total = 0
     Save-Data
 }
 
 function Maybe-Autosave {
-    $now = Utc-Now
-    if (-not $State.runtime.last_autosave_at) {
-        $State.runtime.last_autosave_at = $now
+    Ensure-RuntimeClock
+    $nowTick = Get-ClockTickSeconds
+    if (-not $State.runtime.Contains("last_autosave_tick_s") -or $null -eq $State.runtime.last_autosave_tick_s) {
+        $State.runtime.last_autosave_tick_s = $nowTick
         return
     }
-    if ($now -ge $State.runtime.last_autosave_at.AddSeconds($AutoSaveSeconds)) {
+    $last = [int]$State.runtime.last_autosave_tick_s
+    if ($nowTick -ge ($last + $AutoSaveSeconds)) {
         Save-PendingSessions
-        $State.runtime.last_autosave_at = $now
+        $State.runtime.last_autosave_tick_s = $nowTick
     }
 }
 
@@ -1230,6 +1417,7 @@ $timer = New-Object System.Windows.Forms.Timer
 $timer.Interval = 1000
 $timer.Add_Tick({
     Invoke-Safe {
+        Tick-Timekeeping
         $trayItemFontSmall.Checked = ($State.settings.floating_font_scale -eq 1.0)
         $trayItemFontMed.Checked = ($State.settings.floating_font_scale -eq 1.2)
         $trayItemFontLarge.Checked = ($State.settings.floating_font_scale -eq 1.4)
